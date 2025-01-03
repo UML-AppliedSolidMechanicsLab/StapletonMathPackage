@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34616.47
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RandomMath", "RandomMath\RandomMath.csproj", "{4DC97E09-D876-495A-97BD-03541C72DC07}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestRandomMath", "TestRandomMath\TestRandomMath.csproj", "{A23A771D-6551-4D59-B1F6-9AC4C05E47AB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4DC97E09-D876-495A-97BD-03541C72DC07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DC97E09-D876-495A-97BD-03541C72DC07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DC97E09-D876-495A-97BD-03541C72DC07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DC97E09-D876-495A-97BD-03541C72DC07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A23A771D-6551-4D59-B1F6-9AC4C05E47AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A23A771D-6551-4D59-B1F6-9AC4C05E47AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A23A771D-6551-4D59-B1F6-9AC4C05E47AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A23A771D-6551-4D59-B1F6-9AC4C05E47AB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {10224F5A-D0FA-4EF3-9717-D14297EE9468}
+	EndGlobalSection
+EndGlobal

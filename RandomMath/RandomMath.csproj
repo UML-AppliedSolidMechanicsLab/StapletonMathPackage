@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageId>StapletonMathPackage</PackageId>
+    <Title>Stapleton Math Package</Title>
+    <Description>A random assembly of static methods for matrix and vector operations, system of ODE solver, Newton Raphson, and minor calculus methods.</Description>
+    <PackageTags>Matrix; vector; calculus; solver; ODE;</PackageTags>
+    <Company>University of Massachusetts Lowell</Company>
+    <Authors>Scott Stapleton</Authors>
+    <Version>1.1.6</Version>
+    <Copyright>Copyright (c) Scott Stapleton 2024</Copyright>
+  </PropertyGroup>
+
+</Project>
