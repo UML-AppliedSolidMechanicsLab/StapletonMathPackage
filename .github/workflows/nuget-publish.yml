@@ -4,12 +4,21 @@ on:
     types: [published]
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest     # windows-latest also fine
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '8.0.x' }
-      - name: Pack
-        run: dotnet pack --configuration Release -o ./nupkgs
-      - name: Push
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Test (Release)
+        run: dotnet test --configuration Release --verbosity normal
+
+      - name: Pack (Release)
+        run: dotnet pack ./RandomMath/RandomMath.csproj --configuration Release -o ./nupkgs
+
+      - name: Push to NuGet
         run: dotnet nuget push "./nupkgs/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
