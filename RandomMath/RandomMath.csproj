@@ -9,8 +9,18 @@
     <PackageTags>Matrix; vector; calculus; solver; ODE;</PackageTags>
     <Company>University of Massachusetts Lowell</Company>
     <Authors>Scott Stapleton</Authors>
-    <Version>1.1.6</Version>
+    <Version>1.2.2</Version>
     <Copyright>Copyright (c) Scott Stapleton 2024</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Mapack\**" />
+    <EmbeddedResource Remove="Mapack\**" />
+    <None Remove="Mapack\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+  </ItemGroup>
 
 </Project>

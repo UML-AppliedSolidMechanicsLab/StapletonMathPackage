@@ -21,9 +21,9 @@ namespace TestRandomMath
             double[,] integral = Calculus.TrapezoidMatrix(0, 1, 1000, f);
             double acceptablePrecision = 0.000001;
 
-            Assert.AreEqual(0.4596976941, integral[0, 0], acceptablePrecision);
-            Assert.AreEqual(0.8414709848, integral[1, 0], acceptablePrecision);
-            Assert.AreEqual(3.951615162, integral[2, 0], acceptablePrecision);
+            Assert.That(integral[0, 0], Is.EqualTo(0.4596976941).Within(acceptablePrecision));
+            Assert.That(integral[1, 0], Is.EqualTo(0.8414709848).Within(acceptablePrecision));
+            Assert.That(integral[2, 0], Is.EqualTo(3.951615162).Within(acceptablePrecision));
         }
 
         [Test]
@@ -34,9 +34,9 @@ namespace TestRandomMath
             double[,] integral = Calculus.RhombergMatrix(0, 1, 1000, acceptablePrecision, f);
 
 
-            Assert.AreEqual(0.4596976941, integral[0, 0], acceptablePrecision);
-            Assert.AreEqual(0.8414709848, integral[1, 0], acceptablePrecision);
-            Assert.AreEqual(3.951615162, integral[2, 0], acceptablePrecision);
+            Assert.That(integral[0, 0], Is.EqualTo(0.4596976941).Within(acceptablePrecision));
+            Assert.That(integral[1, 0], Is.EqualTo(0.8414709848).Within(acceptablePrecision));
+            Assert.That(integral[2, 0], Is.EqualTo(3.951615162).Within(acceptablePrecision));
 
         }
 
@@ -48,9 +48,9 @@ namespace TestRandomMath
             double[,] integral = Calculus.DoubleIntegration(0.0, 1.0, 0.0, 1.0, 1000, acceptablePrecision, f);
 
 
-            Assert.AreEqual(1.142639664, integral[0, 0], acceptablePrecision);
-            Assert.AreEqual(1.445884302, integral[1, 0], acceptablePrecision);
-            Assert.AreEqual(5.019159109, integral[2, 0], acceptablePrecision);
+            Assert.That(integral[0, 0], Is.EqualTo(1.142639664).Within(acceptablePrecision));
+            Assert.That(integral[1, 0], Is.EqualTo(1.445884302).Within(acceptablePrecision));
+            Assert.That(integral[2, 0], Is.EqualTo(5.019159109).Within(acceptablePrecision));
 
         }
     }

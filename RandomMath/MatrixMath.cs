@@ -1,20 +1,7 @@
-/*
- * Created by SharpDevelop.
- * User: e46221
- * Date: 6/13/2007
- * Time: 2:42 PM
- * 
- * To change this template use Tools | Options | Coding | Edit Standard Headers.
- */
-
 using System;
 using System.Diagnostics;
-using RandomMath.Mapack;
-//using MathNet.Numerics.LinearAlgebra;
-//using MathNet.Numerics.LinearAlgebra;
-
-
-
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace RandomMath
 {
@@ -22,9 +9,9 @@ namespace RandomMath
 	/// Some run off of the MAPACK library, most are hand-written
 	/// </summary>
 	
-	public class MatrixMath
+	public static class MatrixMath
 	{
-		public bool IsInt(string s)
+		public static bool IsInt(string s)
 		{
 			try
 			{
@@ -37,7 +24,10 @@ namespace RandomMath
 			return true;
 		}
 
-		public static double[,] InvertTransposed3b3(double[,] a)
+        /// <summary>
+        /// Inverts a transposed 3x3 matrix. Throws if singular.
+        /// </summary>
+        public static double[,] InvertTransposed3b3(double[,] a)
 		{
 
 			#region Programmed by me, very ugly!!
@@ -72,112 +62,45 @@ namespace RandomMath
 
 			return result;
 		}
-		
-		public static double[,] Multiply(double[,] a, double[,] b){
-			
-			#region Using Mapack
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = ArrayToMatrix(a);
-			Mapack.Matrix bMatrix = ArrayToMatrix(b);
-			
-			Mapack.Matrix cMatrix = aMatrix * bMatrix;
-			
-			double [,] c = MatrixToArray(cMatrix);
-			#endregion
-			
-			#region Programmed by me
-			/*multiply two matrices a,b.  Puts them into new matrix, c,
-			 * which is returned
-			 * input:
-			 * 	a - lxn matrix
-			 *  b - nxm matrix
-			 * output:
-			 *  c - lxm matrix
-			 * */
-			
-			/*int aRows = a.GetLength(0);
-			int bCols = b.GetLength(1);
-			int bRows = b.GetLength(0);
-			double [,] c = new double [aRows,bCols];
-			int i,j,k;
-			
-			
-					
-			for (j = 0; j < bCols; j++){
-				for (k = 0; k < bRows; k++){
-					if (b[k,j] != 0.0) {
-						for (i = 0; i < aRows; i++){
-							if(a[i,k] != 0.0){
-								c[i, j] += a[i,k] * b[k,j];
-							}
-						}
-					}
-					
-				}
-			}*/
-			#endregion
-			
-			return c;
+
+        /// <summary>
+        /// Matrix-matrix product: C = A * B.
+        /// </summary>
+        public static double[,] Multiply(double[,] a, double[,] b)
+		{
+            var aM = ArrayToMatrix(a);
+            var bM = ArrayToMatrix(b);
+            var cM = aM * bM;
+            return MatrixToArray(cM);
 		}
 
-		public static double[] Multiply(double[,] a, double[] b){
-			
-			#region Using Mapack
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = ArrayToMatrix(a);
-			Mapack.Matrix bMatrix = ArrayToMatrix(b);
-			
-			Mapack.Matrix cMatrix = aMatrix * bMatrix;
-			
-			double [] c = MatrixToVectorArray(cMatrix);
-			#endregion
-			
-			#region Programmed by me
-			
-			/*multiply a matrix a and a vector b.  Puts them into new vector c,
-			 * which is returned
-			 * input:
-			 * 	a - mxn matrix
-			 *  b - n array
-			 * output:
-			 *  c - m array
-			 * */
-			
-			/*int aRows = a.GetLength(0);
-			int bRows = b.GetLength(0);
-			double [] c = new double [aRows];
-			int i,j;
-			
-			for (i = 0; i < aRows; i++){
-				for (j = 0; j < bRows; j++){
-					c[i] += a[i,j] * b[j];
-					
-				}
-			}*/
-			#endregion
-			
-			return c;
-		}
-		
-		public static double[] Multiply(double[] a, double[,] b){
-			
-			#region Using Mapack
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = VectorTransposeArrayToMatrix(a);
-			Mapack.Matrix bMatrix = ArrayToMatrix(b);
-			
-			Mapack.Matrix cMatrix = aMatrix * bMatrix;
-			
-			double [] c = MatrixToVectorArray(cMatrix);
-			#endregion
-			
-			return c;
-		}
-		
-		public static double Determinant(double [,] a){
-			Mapack.Matrix mA = ArrayToMatrix(a);
-			return mA.Determinant;
-		}
+        /// <summary>
+        /// Matrix-vector product: c = A * b.
+        /// </summary>
+        public static double[] Multiply(double[,] a, double[] b){
+            var aM = ArrayToMatrix(a);
+            var bV = Vector<double>.Build.DenseOfArray(b);
+            var cV = aM * bV;
+            return cV.ToArray();
+        }
+
+        /// <summary>
+        /// Row-vector × matrix: yT = aT * B (returns row as 1D array).
+        /// </summary>
+        public static double[] Multiply(double[] a, double[,] b){
+            var aRow = VectorTransposeArrayToMatrix(a);   // 1×n
+            var bM = ArrayToMatrix(b);                  // n×m
+            var cM = aRow * bM;                         // 1×m
+            return MatrixToVectorArray(cM);               // length m
+        }
+
+        /// <summary>
+        /// Computes det(A) using Math.NET.
+        /// </summary>
+        public static double Determinant(double [,] a){
+            var mA = ArrayToMatrix(a);
+            return mA.Determinant();
+        }
 		
 		public static double Trace(double [,] a)
         {
@@ -188,21 +111,18 @@ namespace RandomMath
             }
 			return sum;
         }
-		public static double[] LinSolve(double[,] A, double[] B){
-			
-			#region Using Mapack
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = ArrayToMatrix(A);
-			Mapack.Matrix bMatrix = ArrayToMatrix(B);
-			
-			Mapack.Matrix cMatrix = aMatrix.Solve(bMatrix);
-			
-			double [] c = MatrixToVectorArray(cMatrix);
-			#endregion
-			
-			return c;
-		}
-/*
+
+        /// <summary>
+        /// Solves the linear system A x = b.
+        /// </summary>
+        public static double[] LinSolve(double[,] A, double[] B){
+
+            var aM = ArrayToMatrix(A);
+            var bV = Vector<double>.Build.DenseOfArray(B);
+            var x = aM.Solve(bV);    // uses LU/QR under the hood as appropriate
+            return x.ToArray();
+        }
+        /*
 		/// <summary>
 		/// Solve a system of linear equations (B = A * x) using Pardiso.  Best for smaller systems, especially sparse matrices
 		/// </summary>
@@ -225,18 +145,18 @@ namespace RandomMath
 			return C;
 		}
 */
-		public static void Gauss(double[,] A, double[,] B, int n, int C){
-			/*L.A. Riddle 09/07/91
-		This function solves simultaneous linear equations using Gauss
-		Elimination with Scaled Partial Pivoting
-		(ref pg 139, "Numerical Methods, Software and Analysis" by John R. Rice.)
-		A (n,n) = the coefficient matrix (gets mangled)
-		B (n,c) = the right hand matrix
-		(A) X = B
-		X (1,n), is returned as pointer to B
-		c = 0 for a column vector, 0 - n for n x n matrix...use successive calls
-			 */
-			
+
+        /// <summary>
+        /// This function solves simultaneous linear equations using Gauss
+        ///Elimination with Scaled Partial Pivoting
+        /// (ref pg 139, "Numerical Methods, Software and Analysis" by John R.Rice.)
+        /// </summary>
+        /// <param name="A">A (n,n) = the coefficient matrix (gets mangled)</param>
+        /// <param name="B">B (n,c) = the right hand matrix</param>
+        /// <param name="n"></param>
+        /// <param name="C">c = 0 for a column vector, 0 - n for n x n matrix...use successive calls</param>
+        public static void Gauss(double[,] A, double[,] B, int n, int C){
+					
 			int i; //Dim i As Integer
 			int j; //Dim j As Integer
 			int k; //Dim k As Integer
@@ -334,22 +254,15 @@ namespace RandomMath
 			} //Wend
 			
 		} // end gauss
-		
-		public static double[] Gauss(double[,] inA, double[] inB){
-//		L.A. Riddle 09/07/91
-//		This function solves simultaneous linear equations using Gauss
-//		Elimination with Scaled Partial Pivoting
-//		(ref pg 139, "Numerical Methods, Software and Analysis" by John R. Rice.)
-//		A (n,n) = the coefficient matrix (gets mangled)
-//		B (n) = the right hand matrix
-//		(A) X = B
-//		X (1,n), is returned
-//
-//		//TODO: (LAR) fix error handling for guass subroutine
-//		Return ERROR for singular matrix, consistent system
-//		or singular matrix, inconsistent system
 
-			
+        /// <summary>
+        /// This function solves simultaneous linear equations using Gauss
+        ///Elimination with Scaled Partial Pivoting
+        /// (ref pg 139, "Numerical Methods, Software and Analysis" by John R.Rice.)
+        /// </summary>
+        /// <param name="inA">A (n,n) = the coefficient matrix (gets mangled)</param>
+        /// <param name="inB">B (n) = the right hand matrix</param>
+        public static double[] Gauss(double[,] inA, double[] inB){					
 			int n = inA.GetLength(0);
 			int i;
 			int j;
@@ -457,27 +370,27 @@ namespace RandomMath
 			}
 			return B;
 		} // end gauss
-		
-		public static double [] SymmetricBandedSolver(double[,] A, double [] b){
-			/*SymmetricBandedSolver solves the equaton Ax=b for the special case
-			 * where A is a banded, symmetric matrix.
-			 * A is a matrix in a reduced
-			 *  storage form:
-			 * [a11 .... a1bw 0 ... 0]
-			 * [a21 a22 ....  a2bw 0 .. 0]
-			 * [.........................]
-			 * [0..0 an(n-bw).......ann]
-			 * stored as:
-			 * [a11 a12 a13 ... a1bw]
-			 * [a22 a23 a24 ... a2(bw+1)]
-			 * [........................]
-			 * [ann 0................0]
-			 * or diagonals are stored as columns
-			 * b is an array
-			 * returns an array containing the solution, x
-			 * ref: Intro to FE in Engineering pp 34
-			 * */
-			int k,i,j,i1,j1,i2,j2; //index variables
+
+        /// <summary>
+        /// SymmetricBandedSolver solves the equaton Ax=b for the special case where A is a banded, symmetric matrix.
+		/// A is a matrix in a reduced storage form:
+		/// [a11 .... a1bw 0 ... 0]
+		/// [a21 a22 ....  a2bw 0 .. 0]
+		/// [.........................]
+		/// stored as:
+		/// [a11 a12 a13 ... a1bw]
+		///  [a22 a23 a24 ... a2(bw+1)]
+		///  [........................]
+		///  [ann 0................0]
+		///  or diagonals are stored as columns
+		///  ref: Intro to FE in Engineering pp 34
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="b">b is an array</param>
+        /// <returns>returns an array containing the solution, x</returns>
+        public static double [] SymmetricBandedSolver(double[,] A, double [] b){
+            
+            int k,i,j,i1,j1,i2,j2; //index variables
 			double c; //multiplying constant
 			double sum; //summing variable
 			int nbw =A.GetLength(1); //half band-width
@@ -521,65 +434,22 @@ namespace RandomMath
 			return b;
 			
 		}
-		
-		public static double[,] InvertMatrix(double[,] inMatrix){
-			
-			//Check for singularity
-			bool issingular = IsSingular(inMatrix);
-			if (issingular) {
-				//	throw new ArgumentException("Matrix is Singular, cannot compute inverse");
-				
-			}
-			
-			#region Using Mapack
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = ArrayToMatrix(inMatrix);
-			
-			Mapack.Matrix cMatrix = aMatrix.Inverse;
-			
-			double [,] c = MatrixToArray(cMatrix);
-			#endregion
-			
-			#region My Code
-			/*
-			int I;
-			int j;
-			int k;
-			int nRows = inMatrix.GetLength(0);
-			int nCols = inMatrix.GetLength(1);
-			double [,] outMatrix = new double[nRows,nCols];
-			double[,] callMatrix = new double[nRows,nCols];
-			// fill inverse matrix with the identity matrix...
-			for (j = 0; j < nCols; j++){                  // column loop...
-				for (k = 0; k < nRows; k++){              // row loop...
-					if (k == j){
-						outMatrix[k, j] = 1;
-					}
-					else{
-						outMatrix[k, j] = 0;
-					}
-				}
-			}
-			// loop over columns of the inverse matrix
-			for (I = 0; I < nCols; I++){  //column loop make the surrogate copy of ABD_inv:
-				for (j = 0; j < nCols; j++){
-					for (k = 0; k < nRows; k++){
-						callMatrix[k, j] = inMatrix[k, j];
-					}
-				}
-				
-				MatrixMath.gauss(callMatrix, outMatrix, nCols, I); // calculate inverse column j
-			}
-			return outMatrix; //return outmatrix
-			 */
-			#endregion
-			
-			return c;
-			
-		}
-		
-		///Computes the "entry-wise" p-norm of a matrix
-		public static double PNorm(int p, double[,] inMatrix)
+
+        /// <summary>
+        /// Computes A inv using LU; throws if singular.
+        /// </summary>
+        public static double[,] InvertMatrix(double[,] inMatrix)
+		{
+            var aM = ArrayToMatrix(inMatrix);
+            // Math.NET: use LU inverse for robustness
+            var inv = aM.LU().Inverse();
+            return MatrixToArray(inv);
+        }
+
+        /// <summary>
+        ///Computes the "entry-wise" p-norm of a matrix
+        /// </summary>
+        public static double PNorm(int p, double[,] inMatrix)
 		{
 			int n = inMatrix.GetLength(0);
 			int m = inMatrix.GetLength(1);
@@ -741,20 +611,22 @@ namespace RandomMath
 		{
 			int n = A.GetLength(0);
 			int m = A.GetLength(1);
-			double [,] relError = new double[n,m];
 			
 			if (n != B.GetLength(0) || m != B.GetLength(1)) {
 				
-				throw new ArgumentException("Matrices must be same dimentsions");
+				throw new ArgumentException("RelError: matrices must be the same dimensions.");
 			}
-			
-			for (int j = 0; j < m; j++) {
+
+            double[,] relError = new double[n, m];
+
+            for (int j = 0; j < m; j++) {
 				for (int i =0; i < n; i++) {
-					relError[i,j] = System.Math.Abs((A[i,j] - B[i,j])/A[i,j]*100);
-					if ((A[i,j]-B[i,j]) == 0) {
-						relError[i,j] = 0;
-					}
-				}
+                    double denom = Math.Abs(A[i, j]);
+                    if (denom <= 0.0)
+                        relError[i, j] = (A[i, j] == B[i, j]) ? 0.0 : double.PositiveInfinity;
+                    else
+                        relError[i, j] = Math.Abs((A[i, j] - B[i, j]) / denom) * 100.0;
+                }
 			}
 			return relError;
 		}
@@ -1090,38 +962,44 @@ namespace RandomMath
 			}
 		}
 		
-		public static bool IsSingular(double [,] SquareMatrix){
-			
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = ArrayToMatrix(SquareMatrix);
-			
-			double Det = aMatrix.Determinant;
-			
-			if (Math.Abs(Det) <= 0.000000000001) {
-				return true;
-			}
-			return false;
-		}
-
-		public static void EigenValAndEigenVectors(double[,] SquareMatrix, out double[] EigenValues, out double[,] EigenVectors)
+		public static bool IsSingular(double [,] SquareMatrix)
 		{
+            var aM = ArrayToMatrix(SquareMatrix);
+            // Simple determinant check (mirrors your original logic):
+            double det = aM.Determinant();
+            return Math.Abs(det) <= 1e-12;
+            // (Alternatively, use aM.ConditionNumber() if you prefer a numeric threshold.)
+        }
 
-			//First, convert the double array to a Matrix from the Mapack namespace
-			Mapack.Matrix aMatrix = ArrayToMatrix(SquareMatrix);
-			
-			Mapack.EigenvalueDecomposition eigenvalueDecomposition = new EigenvalueDecomposition(aMatrix);
+        public static void EigenValAndEigenVectors(double[,] SquareMatrix, out double[] EigenValues, 
+			out double[,] EigenVectors)
+        {
+            var aM = ArrayToMatrix(SquareMatrix);
+            var evd = aM.Evd(IsSymmetric(SquareMatrix) ? Symmetricity.Symmetric : Symmetricity.Asymmetric);
 
-			//EigenVectors
-			Mapack.Matrix eigenVectors = eigenvalueDecomposition.EigenvectorMatrix;
-			EigenVectors = MatrixToArray(eigenVectors);
+            var vals = evd.EigenValues;
+            EigenValues = new double[vals.Count];
+            for (int i = 0; i < vals.Count; i++)
+                EigenValues[i] = vals[i].Real;
 
-			//EigenValues
-			EigenValues = eigenvalueDecomposition.RealEigenvalues;
+            var vec = evd.EigenVectors;
+            EigenVectors = MatrixToArray(vec);
+        }
 
-		}
+        /// <summary>
+        /// Checks if matrix is symmetric within a tolerance.
+        /// </summary>
+        private static bool IsSymmetric(double[,] A, double tol = 1e-12)
+        {
+            int n = A.GetLength(0), m = A.GetLength(1);
+            if (n != m) return false;
+            for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++)
+                    if (Math.Abs(A[i, j] - A[j, i]) > tol) return false;
+            return true;
+        }
 
-
-		public static void ModifiedGuyanReduction(double [,] Ktotal, double [] Rtotal, int nReducedDOF, ref double [,] reducedK, ref double [] reducedR){
+        public static void ModifiedGuyanReduction(double [,] Ktotal, double [] Rtotal, int nReducedDOF, ref double [,] reducedK, ref double [] reducedR){
 			int nDOF = Rtotal.Length;
 			if (nDOF == nReducedDOF) {
 				reducedK = Ktotal;
@@ -1311,111 +1189,29 @@ namespace RandomMath
 			return new double[3] { eig1, eig2, eig3 };
 		}
 
-		#region Methods to use the Mapack library
-		public static Mapack.Matrix ArrayToMatrix(double [,] A){
-			
-			int nrow = A.GetLength(0);
-			int ncol = A.GetLength(1);
-			
-			Mapack.Matrix myMatrix = new Matrix(nrow, ncol);
-			
-			for (int j = 0; j < ncol; j++) {
-				
-				for (int i = 0; i < nrow; i++) {
-					
-					myMatrix[i,j] = A[i,j];
-				}
-			}
-			return myMatrix;
-		}
-		
-		public static Mapack.Matrix ArrayToMatrix(double [] A){
-			
-			int nrow = A.Length;
-			
-			Mapack.Matrix myMatrix = new Matrix(nrow, 1);
-			
-			for (int i = 0; i < nrow; i++) {
-				
-				myMatrix[i,0] = A[i];
-				
-			}
-			return myMatrix;
-		}
-		
-		public static Mapack.Matrix VectorTransposeArrayToMatrix(double [] A){
-			
-			int nCol = A.Length;
+        #region Math.NET conversion helpers
+        private static Matrix<double> ArrayToMatrix(double[,] A)
+            => DenseMatrix.OfArray(A);
 
-			Mapack.Matrix myMatrix = new Matrix(1, nCol);
-			
-			for (int i = 0; i < nCol; i++) {
-				
-				myMatrix[0,i] = A[i];
-				
-			}
-			return myMatrix;
-		}
-		
-		public static double [,] MatrixToArray(Mapack.Matrix A){
-			
-			int nrow = A.Rows;
-			int ncol = A.Columns;
-			
-			double [,] myArray= new double[nrow, ncol];
-			
-			for (int j = 0; j < ncol; j++) {
-				
-				for (int i = 0; i < nrow; i++) {
-					
-					myArray[i,j] = A[i,j];
-				}
-			}
-			return myArray;
-		}
-		
-		public static double [] MatrixToVectorArray(Mapack.Matrix A){
-			
-			int nrow = A.Rows;
-			int nCol = A.Columns;
-			
-			if(nrow != 1){
-				double [] myArray= new double[nrow];
-				
-				for (int i = 0; i < nrow; i++) {
-					
-					myArray[i] = A[i,0];
-				}
-				return myArray;
-			}
-			else {
-				double [] myArray= new double[nCol];
-				
-				for (int i = 0; i < nCol; i++) {
-					
-					myArray[i] = A[0,i];
-				}
-				return myArray;
-			}
-		}
+        private static Matrix<double> ArrayToMatrix(double[] A) // column vector
+            => DenseMatrix.OfColumnArrays(new[] { A });
 
-		public static double[] TensorToVoigtVector(double[,] Tensor)
+        private static Matrix<double> VectorTransposeArrayToMatrix(double[] A) // row vector
+            => DenseMatrix.OfRowArrays(new[] { A });
+
+        private static double[,] MatrixToArray(Matrix<double> A)
+            => (A as DenseMatrix)?.ToArray() ?? DenseMatrix.OfMatrix(A).ToArray();
+
+        private static double[] MatrixToVectorArray(Matrix<double> A)
         {
-			return new double[6] { Tensor[0, 0], Tensor[1, 1], Tensor[2, 2], Tensor[1, 2], Tensor[0, 2], Tensor[0, 1] };
+            // if 1 column => column vector; if 1 row => row vector
+            if (A.ColumnCount == 1) return A.Column(0).ToArray();
+            if (A.RowCount == 1) return A.Row(0).ToArray();
+            // Fallback: flatten first column (matches previous behavior expectations)
+            return A.Column(0).ToArray();
         }
-		public static double[,] VoigtVectorToTensor(double[] VoigtVector)
-		{
-			return new double[3, 3] { {VoigtVector[0], VoigtVector[5], VoigtVector[4] },
-			{VoigtVector[5], VoigtVector[1], VoigtVector[3] },
-			{VoigtVector[4], VoigtVector[3], VoigtVector[2] }};
-		}
-		public static double[,] VoigtVectorToTensorStrain(double[] VoigtVector)
-		{
-			return new double[3, 3] { {VoigtVector[0], 0.5*VoigtVector[5], 0.5*VoigtVector[4] },
-			{0.5*VoigtVector[5], VoigtVector[1], 0.5*VoigtVector[3] },
-			{0.5*VoigtVector[4], 0.5*VoigtVector[3], VoigtVector[2] }};
-		}
-		#endregion
+        #endregion
+
 	}
 }
 

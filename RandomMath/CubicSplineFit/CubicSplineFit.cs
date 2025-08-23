@@ -27,7 +27,7 @@ namespace RandomMath.CubicSplineFit
         /// <summary>
         /// Fits a Cubic spline to a data set X and Y.  Interpolation method available to get intermediate y, y', and y'' for a given x
         /// </summary>
-        #endregion
+        #endregion 
         public CubicSplineFit(double[] X, double[] Y)
         {
             x = X;

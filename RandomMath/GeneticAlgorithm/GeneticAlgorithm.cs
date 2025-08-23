@@ -1,27 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime;
 using System.Text;
+using System.Threading;
 
 namespace RandomMath.GeneticAlgorithm
 {
     /// <summary>
-    /// Description of GeneticAlgorithm.  Finds the minimum of some function.  (if you want the max, invert your function)
+    /// Finds the minimum of some function.  (if you want the max, invert your function)
     /// </summary>
     public class GeneticAlgorithm
     {
         #region Private member variables
         private List<Population> lPopulation;
+        private IOptimize function;
+
+        //Setting
+        private double MinError;
+        private int MaxIt;
+        private GASettings settings;
+
+        //Results Tracking
         private Chromosome best;
         private int iterations;
         private double CurrentError;
         private List<double> lAverageFitness;
         private List<double> lBestFitness;
-        private IOptimize function;
-        private int nSamples;
-        private double probMutate;
-        private double probXOver;
-        private double MinError;
-        private int MaxIt;
         #endregion
 
         #region Public Properties
@@ -44,6 +48,13 @@ namespace RandomMath.GeneticAlgorithm
             get
             {
                 return CurrentError;
+            }
+        }
+        public double BestFitness
+        {
+            get
+            {
+                return lPopulation[iterations - 1].BestFitness;
             }
         }
         public List<double> AverageFitnesses
@@ -78,7 +89,7 @@ namespace RandomMath.GeneticAlgorithm
 
         #region Constructors
 
-        public GeneticAlgorithm(IOptimize inputFunction) : this(inputFunction, 100, 0.1, 0.8, 0.000001, 100)
+        public GeneticAlgorithm(IOptimize inputFunction) : this(inputFunction, new GASettings(100, 0.1, 0.4, 0.8, 1), 0.000001, 100)
         {
 
         }
@@ -93,28 +104,22 @@ namespace RandomMath.GeneticAlgorithm
         /// <param name="probXOver">the probability that a crossover between children will happen (0 - 1) </param>
         /// <param name="Error">The relative error between best chromosome, which dictates whether optimal is found</param>
         #endregion
-        public GeneticAlgorithm(IOptimize inputFunction, int NumberOfSamples, double ProbMutate, double ProbXOver, double Error, int MaxIterations)
+        public GeneticAlgorithm(IOptimize inputFunction, GASettings settings, double Error, int MaxIterations)
         {
             lBestFitness = new List<double>();
             lAverageFitness = new List<double>();
             lPopulation = new List<Population>();
             iterations = 0;
-            nSamples = NumberOfSamples;
+            this.settings = settings;
             function = inputFunction;
-            probMutate = ProbMutate;
-            probXOver = ProbXOver;
             MinError = Error;
             MaxIt = MaxIterations;
 
             //Run the first iteration
-            lPopulation.Add(new Population(function, nSamples, probMutate, probXOver));
+            Population firstPopulation = new Population(function, settings);
 
             //Record the 1st iteration, and set Function to the Best
-            lAverageFitness.Add(lPopulation[iterations].AverageFitness);
-            lBestFitness.Add(function.Eval(lPopulation[iterations].Best.String));
-            best = lPopulation[iterations].Best;
-
-            iterations++;
+            SaveResults(firstPopulation);
         }
 
         #endregion
@@ -130,12 +135,9 @@ namespace RandomMath.GeneticAlgorithm
         {
             bool PerformNextStep = true;
 
-
             while (PerformNextStep)
             {
-
                 PerformNextStep = RunSingleStep();
-
             }
         }
 
@@ -144,29 +146,41 @@ namespace RandomMath.GeneticAlgorithm
         {
             bool PerformNextStep = true;
 
-            Chromosome[] newPopulation = lPopulation[iterations - 1].NewPopulation();
-            lPopulation.Add(new Population(function, newPopulation, nSamples, probMutate, probXOver));
+            //Pass the previous population to the next generation
+            Chromosome[] prevChildren = lPopulation[iterations - 1].CPopulation;
+            IOptimize[] functions = lPopulation[iterations - 1].Functions;
+            Population newPopulation = new Population(functions, prevChildren, settings);
+            
+            SaveResults(newPopulation);
 
-            CurrentError = Math.Abs((lPopulation[iterations].AverageFitness -
-                                     lPopulation[iterations - 1].AverageFitness)
-                                    / lPopulation[iterations].AverageFitness);
-            //Add the results
-            lAverageFitness.Add(lPopulation[iterations].AverageFitness);
-            lBestFitness.Add(function.Eval(lPopulation[iterations].Best.String));
-            best = lPopulation[iterations].Best;
-            iterations++;
+            CurrentError = Math.Abs((lPopulation[iterations-1].AverageFitness -
+                                     lPopulation[iterations - 2].AverageFitness)
+                                    / lPopulation[iterations-1].AverageFitness);
 
             //Check 
             if ((CurrentError < MinError && CurrentError != 0.0) || iterations > MaxIt)
             {
-
                 PerformNextStep = false;
                 iterations--;
             }
             return PerformNextStep;
         }
+
+        private void SaveResults(Population newPopulation)
+        {
+            //Add the results
+            lPopulation.Add(newPopulation);
+            lAverageFitness.Add(newPopulation.AverageFitness);
+            lBestFitness.Add(newPopulation.BestFitness);
+            best = newPopulation.Best;
+            iterations++;
+        }
         #endregion
 
+        #region private methods
+
+
+        #endregion
     }
 
     #region Interface needed for the GeneticAlgorithm
@@ -174,16 +188,55 @@ namespace RandomMath.GeneticAlgorithm
     public interface IOptimize
     {
         int nX { get; }
-        double[] currentC { get; }
+        
         /// <summary>
         /// Evaluates the function at x, and gives the fitness
         /// </summary>
         /// <param name="X">all inputs will come in at 0-1.  Must scale them out</param>
         /// <returns>the fitness of the function: some numeric value that can be used to compare the function
-        /// evaluated at different points</returns>
+        /// evaluated at different points.  The fitness will be minimized</returns>
         double Eval(double[] X);
 
+        IOptimize DeepCopy();
     }
 
     #endregion
+
+    public class GASettings
+    {
+        public int NumSamples { get; set; }
+        public double MutationProbability { get; set; }
+        public double PurturbationProbability { get; set; }
+        public double CrossoverProbability { get; set; }
+        public int NumCores { get; set; }
+
+        public GASettings(int numSamples, double mutationProbability, double crossoverProbability, double purturbationProbability, int numCores)
+        {
+            //Make sure nsamples is even
+            NumSamples = ((int)(numSamples / 2.0d)) * 2;
+            MutationProbability = mutationProbability;
+            CrossoverProbability = crossoverProbability;
+            NumCores = numCores;
+            PurturbationProbability = purturbationProbability;
+        }
+    }
+    public static class ThreadRandom
+    {
+        private static readonly ThreadLocal<Random> threadRandom =
+            new ThreadLocal<Random>(() => new Random(Guid.NewGuid().GetHashCode()));
+
+        public static Random GetThreadRandom()
+        {
+            return threadRandom.Value;
+        }
+        public static double NextDouble()
+        {
+            return GetThreadRandom().NextDouble();
+        }
+
+        public static int Next(int maxValue)
+        {
+            return GetThreadRandom().Next(maxValue);
+        }
+    }
 }

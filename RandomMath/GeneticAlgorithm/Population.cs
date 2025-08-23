@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using static RandomMath.RootFinding;
 
 namespace RandomMath.GeneticAlgorithm
 {
@@ -8,13 +11,10 @@ namespace RandomMath.GeneticAlgorithm
     {
         #region private members
         private Chromosome[] cPopulation;
-        private Chromosome[] cChildren;
-        private IOptimize function;
-        private int nSamples;
-        private double probMutate;
-        private double probXOver;
-        private Random random = new Random();
-        private double AveFitness;
+        private double aveFitness;
+        private double bestFitness;
+        private IOptimize[] functions;
+
         #endregion
 
         #region Public Members
@@ -25,130 +25,167 @@ namespace RandomMath.GeneticAlgorithm
                 return cPopulation[0];
             }
         }
-        public Chromosome[] Children
-        {
-            get
-            {
-                return cChildren;
-            }
-        }
+
         public double AverageFitness
         {
             get
             {
-                return AveFitness;
+                return aveFitness;
+            }
+        }
+
+        public double BestFitness
+        {
+            get
+            {
+                return bestFitness;
+            }
+        }
+
+        public Chromosome[] CPopulation
+        {
+            get
+            {
+                return cPopulation;
+            }
+        }
+
+        public IOptimize[] Functions
+        {
+            get
+            {
+                return functions;
             }
         }
         #endregion
 
         #region Constructors
-        public Population(IOptimize Function, int NumberOfSamples, double ProbabilityOfMutation, double ProbabilityOfXOver)
+        /// <summary>
+        /// Constructor for the first population only
+        /// </summary>
+        /// <param name="function">function to be evaluated</param>
+        public Population(IOptimize function, GASettings settings)
         {
+            Chromosome[] firstPopulation = MakeFirstPopulation(function, settings);
 
-            //Make sure nSamples is even
-            nSamples = ((int)(NumberOfSamples / 2d)) * 2;
-            Chromosome[] firstPopulation = FirstPopulation(Function, nSamples, ProbabilityOfMutation);
-            Initiate(Function, firstPopulation, NumberOfSamples, ProbabilityOfMutation, ProbabilityOfXOver);
+            //Make a function for each core so that there is no conflict if running on multiple cores
+            functions = new IOptimize[settings.NumCores];
+            for (int i = 0; i < settings.NumCores; i++)
+            {
+                functions[i] = function.DeepCopy();
+            }
+
+            //Evaluate all of the functions
+            //Now do the evaluation part in paralell for longer evaluations
+            Parallel.For(0, firstPopulation.Length, new ParallelOptions { MaxDegreeOfParallelism = settings.NumCores }, i =>
+            {
+                int coreIndex = i % settings.NumCores; // Assign optimizer per thread (round-robin)
+                firstPopulation[i].MutateAndEvaluateFitness(true, 0.0, 0.0, functions[coreIndex]);
+            });
+
+            //Save the results
+            cPopulation = firstPopulation;
+            Array.Sort(cPopulation); // Sort the population based on fitness
+            FindAverageFitness();
+            bestFitness = cPopulation[0].Fitness;
         }
 
-        public Population(IOptimize Function, Chromosome[] PrevChildren, int NumberOfSamples, double ProbabilityOfMutation, double ProbabilityOfXOver)
+        public Population(IOptimize[] functions, Chromosome[] PrevChildren, GASettings settings)
         {
-            Initiate(Function, PrevChildren, NumberOfSamples, ProbabilityOfMutation, ProbabilityOfXOver);
-        }
+            //Save previous children as parents
 
-        private void Initiate(IOptimize Function, Chromosome[] PrevChildren, int NumberOfSamples, double ProbabilityOfMutation, double ProbabilityOfXOver)
-        {
-            function = Function;
-            cPopulation = PrevChildren;
-            probMutate = ProbabilityOfMutation;
-            probXOver = ProbabilityOfXOver;
-            //Make sure nSamples is even
-            nSamples = ((int)(NumberOfSamples / 2.0d)) * 2;
+            this.functions = functions;
 
-            cChildren = new Chromosome[nSamples];
+            Chromosome[] cChildren = MatingTournaments(settings, PrevChildren);
+
+            cPopulation = CombineBestOfChildrenAndParentsAndSort(cChildren, PrevChildren);
 
             FindAverageFitness();
 
-            MatingTournament();
-
+            bestFitness = cPopulation[0].Fitness;
         }
 
         #endregion
 
-        #region private methods
-        private Chromosome[] FirstPopulation(IOptimize Function, int NumberOfSamples, double propMutate)
-        {
-            Chromosome[] firstPop = new Chromosome[NumberOfSamples];
+        #region Public Methods
 
-            for (int i = 0; i < NumberOfSamples; i++)
+        #endregion
+
+        #region private methods
+        private Chromosome[] MakeFirstPopulation(IOptimize function, GASettings settings)
+        {
+            Chromosome[] firstPop = new Chromosome[settings.NumSamples];
+
+            for (int i = 0; i < settings.NumSamples; i++)
             {
 
-                double[] inputString = new double[Function.nX];
+                double[] inputString = new double[function.nX];
 
-                for (int j = 0; j < Function.nX; j++)
+                for (int j = 0; j < function.nX; j++)
                 {
 
-                    inputString[j] = random.NextDouble();
+                    inputString[j] = ThreadRandom.NextDouble();
 
                 }
-                firstPop[i] = new Chromosome(Function, inputString, propMutate);
+                firstPop[i] = new Chromosome(inputString);
             }
             return firstPop;
         }
 
-        private void MatingTournament()
+        private Chromosome[] MatingTournaments(GASettings settings, Chromosome[] cParents)
         {
+            int nPairs = cParents.Length / 2;
+            int nCores = settings.NumCores;
 
-            for (int i = 0; i < nSamples / 2; i++)
+            Chromosome[] cChildren = new Chromosome[settings.NumSamples];
+
+            //First, make the children population so that my parallel loop is threadsafe:
+            for (int i = 0; i < nPairs; i++)
             {
-
                 //Chose 4 samples for tournament
                 int[] randomIndices = new int[4];
                 for (int j = 0; j < 4; j++)
                 {
-                    randomIndices[j] = RandomIndex(nSamples);
+                    randomIndices[j] = ThreadRandom.Next(cParents.Length);
                 }
                 //Since they are all sorted, the lowest 2 #'s are the parents
                 Array.Sort(randomIndices);
 
-                cChildren[2 * i] = new Chromosome(cPopulation[randomIndices[0]]);
-                cChildren[2 * i + 1] = new Chromosome(cPopulation[randomIndices[1]]);
-
-                //XOver and Mutate
-                BabyMaker(cChildren[2 * i], cChildren[2 * i + 1]);
+                cChildren[2 * i] = cParents[randomIndices[0]].DeepCopy();
+                cChildren[2 * i + 1] = cParents[randomIndices[1]].DeepCopy();
             }
+
+            //Now do the evaluation part in paralell for longer evaluations
+            Parallel.For(0, nPairs, new ParallelOptions { MaxDegreeOfParallelism = nCores }, i =>
+            {
+                int coreIndex = i % nCores; // Assign optimizer per thread (round-robin)
+
+                //XOver and MutateAndEvaluateFitness
+                BabyMaker(functions[coreIndex], settings.CrossoverProbability, settings.MutationProbability,
+                    settings.PurturbationProbability, cChildren[2 * i], cChildren[2 * i + 1]);
+
+            });
+
+            return cChildren;
         }
 
-        private void BabyMaker(Chromosome child1, Chromosome child2)
+        private void BabyMaker(IOptimize function, double probXOver, double probMutation,
+            double probPurturbation, Chromosome child1, Chromosome child2)
         {
 
-            bool firstHasBeenChanged = false;
-            bool secondHasBeenChanged = false;
+            bool haveBeenChanged = false;
 
             //perform xover twice
-            if (random.NextDouble() < probXOver)
+            if (ThreadRandom.NextDouble() < probXOver)
             {
-
-                firstHasBeenChanged = true;
-                secondHasBeenChanged = true;
+                haveBeenChanged = true;
 
                 XOver(child1.String, child2.String);
-                XOver(child1.String, child2.String);
-
+                //XOver(child1.String, child2.String);
             }
-            //Mutate
-            child1.Mutate(firstHasBeenChanged);
-            child2.Mutate(secondHasBeenChanged);
-
-        }
-
-        private int RandomIndex(int nPoints)
-        {
-
-            double rN = random.NextDouble();
-            double rIndex = (nPoints * rN);
-            int rInt = (int)(rIndex);
-            return rInt;
+            //MutateAndEvaluateFitness
+            child1.MutateAndEvaluateFitness(haveBeenChanged, probMutation, probMutation, function);
+            child2.MutateAndEvaluateFitness(haveBeenChanged, probMutation, probMutation, function);
 
         }
 
@@ -156,12 +193,10 @@ namespace RandomMath.GeneticAlgorithm
         {
 
             double[] tempC1 = new double[c1.Length];
-            int ranIndex = RandomIndex(c1.Length);
+            Array.Copy(c1, tempC1, c1.Length);
 
-            for (int i = 0; i < c1.Length; i++)
-            {
-                tempC1[i] = c1[i];
-            }
+            int ranIndex = ThreadRandom.Next(c1.Length);
+
             for (int i = ranIndex; i < c1.Length; i++)
             {
                 c1[i] = c2[i];// + (c1[i] - c2[i])/2.0*random.NextDouble();
@@ -170,193 +205,46 @@ namespace RandomMath.GeneticAlgorithm
 
         }
 
-        private void FindAverageFitness()
-        {
-
-            Array.Sort(cPopulation);
-
-            AveFitness = cPopulation[0].Fitness;
-
-            for (int i = 1; i < nSamples; i++)
-            {
-
-                AveFitness += cPopulation[i].Fitness;
-            }
-
-            AveFitness = AveFitness / nSamples;
-        }
-
-
-        #endregion
-
-        #region Public Methods
-
-        public Chromosome[] NewPopulation()
+        /// <summary>
+        /// Creates a new population from the current population and the children, 
+        /// taking the best half of both
+        /// </summary>
+        /// <returns>population of the best half of parents and children, sorted</returns>
+        private Chromosome[] CombineBestOfChildrenAndParentsAndSort(Chromosome[] cChildren, Chromosome[] cParents)
         {
 
             //Combine children and population, and keep nsamples of the best ones
-            Chromosome[] BigHappyFamily = new Chromosome[2 * nSamples];
+            Chromosome[] parentsAndChildren = new Chromosome[2 * cChildren.Length];
 
             //copy manually to ensure deep copy!!
-            cPopulation.CopyTo(BigHappyFamily, 0);
-            cChildren.CopyTo(BigHappyFamily, nSamples);
+            cParents.CopyTo(parentsAndChildren, 0);
+            cChildren.CopyTo(parentsAndChildren, cParents.Length);
 
             //now, sort the big happy family
-            Array.Sort(BigHappyFamily);
-            //now take the better half
-            Chromosome[] newPop = new Chromosome[nSamples];
-            for (int i = 0; i < nSamples; i++)
-            {
+            Array.Sort(parentsAndChildren);
+            //now take the "fitter" half
+            Chromosome[] newPop = new Chromosome[cChildren.Length];
 
-                newPop[i] = new Chromosome(BigHappyFamily[i]);
+            for (int i = 0; i < cChildren.Length; i++)
+            {
+                newPop[i] = parentsAndChildren[i].DeepCopy();
             }
 
             return newPop;
         }
 
-        #endregion
-    }
+        private void FindAverageFitness()
+        {
+            double sum = 0;
 
+            for (int i = 0; i < cPopulation.Length; i++)
+            {
+                sum += cPopulation[i].Fitness; ;
+            }
+            aveFitness = sum / cPopulation.Length;
+        }
 
-
-    /// <summary>
-    /// Description of Chromosome.
-    /// </summary>
-    public class Chromosome : IComparable
-    {
-        #region private members
-        private IOptimize function;
-        private double[] dString;
-        private double fitness;
-        private double pMutate;
-        private Random random = new Random();
         #endregion
 
-        #region public members
-        public double[] String
-        {
-            get
-            {
-                return dString;
-            }
-            set
-            {
-                dString = value;
-            }
-        }
-        public double Fitness
-        {
-            get
-            {
-                return fitness;
-            }
-        }
-        #endregion
-
-        #region constructor
-        public Chromosome(IOptimize Function, double[] inputString, double ProbabilityOfMutation)
-        {
-            function = Function;
-            fitness = function.Eval(inputString);
-            pMutate = ProbabilityOfMutation;
-            dString = inputString;
-
-        }
-        //Put this constructor to copy a Chromosome
-        public Chromosome(Chromosome ChromosomeToCopy)
-        {
-            function = ChromosomeToCopy.function;
-            fitness = ChromosomeToCopy.fitness;
-            pMutate = ChromosomeToCopy.pMutate;
-            dString = new double[ChromosomeToCopy.String.Length];
-            for (int i = 0; i < ChromosomeToCopy.String.Length; i++)
-            {
-                dString[i] = ChromosomeToCopy.dString[i];
-            }
-
-        }
-        #endregion
-
-        #region public methods
-        public int CompareTo(object o)
-        {
-            Chromosome c = (Chromosome)o;
-            //This will spit out a negative interger if this is "smaller".  Since smaller is good, smaller numerically is "smaller" in the icomparable sense
-            //return (int)(c.fitness - fitness);
-            double dReturn = fitness - c.fitness;
-            int iReturn = 0;
-            if (dReturn > 0)
-            {
-                iReturn = 1;
-            }
-            else if (dReturn < 0)
-            {
-                iReturn = -1;
-            }
-
-            return iReturn;
-
-        }
-
-        public void Mutate(bool hasBeenChanged)
-        {
-
-            //Fine tuning Mutation		
-            for (int i = 0; i < function.nX; i++)
-            {
-                double r = random.NextDouble();
-                if (r < pMutate)
-                {
-
-                    hasBeenChanged = true;
-
-                    if ((1.0 - dString[i]) < .005)
-                    {
-
-                        dString[i] -= 0.005;
-
-                    }
-                    else if ((dString[i]) < .005)
-                    {
-
-                        dString[i] += 0.005;
-
-                    }
-                    else
-                    {
-                        r = random.NextDouble();
-                        if (r < 0.5)
-                        {
-                            dString[i] += 0.005;
-                        }
-                        else dString[i] -= 0.005;
-
-                    }
-                }
-            }
-            //A second type of mutation
-            for (int i = 0; i < function.nX; i++)
-            {
-
-                double r = random.NextDouble();
-
-                if (r < pMutate)
-                {
-
-                    hasBeenChanged = true;
-
-                    dString[i] = random.NextDouble();
-
-                }
-            }
-
-            //now evaluate it again if it has been changed
-            if (hasBeenChanged)
-            {
-
-                fitness = function.Eval(dString);
-            }
-        }
-        #endregion
     }
 }
