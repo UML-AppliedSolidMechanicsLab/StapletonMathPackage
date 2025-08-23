@@ -1,0 +1,19 @@
+Your release flow (all from Visual Studio)
+
+Bump the version in the project:
+
+Project → Properties → Package → Version (or edit <Version> in the .csproj).
+
+Commit the changes in the Git Changes window (e.g., chore: bump version to 1.1.0) and Push.
+
+(Optional but nice) Create a Git tag in VS:
+
+Git Changes → Tag (e.g., v1.1.0) → Push tags.
+
+Publish a GitHub Release:
+
+In VS you can’t publish the release itself, so click View on GitHub (top bar) → Releases → Draft a new release.
+
+Pick the tag (or create it here), add notes (or auto-generate), click Publish release.
+
+That’s it—your nuget-publish workflow runs, builds your project, packs the .nupkg, and pushes to NuGet. No command line needed, and you never leave Visual Studio except to click “Publish release” in the browser.
