@@ -1189,6 +1189,44 @@ namespace RandomMath
 			return new double[3] { eig1, eig2, eig3 };
 		}
 
+        /// <summary>
+        /// Converts a 3x3 symmetric tensor to a 6-element Voigt vector.
+        /// The mapping is: [xx, yy, zz, yz, xz, xy].
+        /// </summary>
+        /// <param name="Tensor">A 3x3 symmetric tensor (double[,]).</param>
+        /// <returns>A 6-element Voigt vector (double[]).</returns>
+        public static double[] TensorToVoigtVector(double[,] Tensor)
+        {
+            return new double[6] { Tensor[0, 0], Tensor[1, 1], Tensor[2, 2], Tensor[1, 2], Tensor[0, 2], Tensor[0, 1] };
+        }
+
+        /// <summary>
+        /// Converts a 6-element Voigt vector to a 3x3 symmetric tensor.
+        /// The mapping is: [xx, yy, zz, yz, xz, xy].
+        /// </summary>
+        /// <param name="VoigtVector">A 6-element Voigt vector (double[]).</param>
+        /// <returns>A 3x3 symmetric tensor (double[,]).</returns>
+        public static double[,] VoigtVectorToTensor(double[] VoigtVector)
+        {
+            return new double[3, 3] { {VoigtVector[0], VoigtVector[5], VoigtVector[4] },
+            {VoigtVector[5], VoigtVector[1], VoigtVector[3] },
+            {VoigtVector[4], VoigtVector[3], VoigtVector[2] }};
+        }
+
+        /// <summary>
+        /// Converts a 6-element Voigt strain vector to a 3x3 symmetric strain tensor.
+        /// Shear components are halved according to engineering strain convention.
+        /// The mapping is: [xx, yy, zz, yz, xz, xy].
+        /// </summary>
+        /// <param name="VoigtVector">A 6-element Voigt strain vector (double[]).</param>
+        /// <returns>A 3x3 symmetric strain tensor (double[,]).</returns>
+        public static double[,] VoigtVectorToTensorStrain(double[] VoigtVector)
+        {
+            return new double[3, 3] { {VoigtVector[0], 0.5*VoigtVector[5], 0.5*VoigtVector[4] },
+                    {0.5*VoigtVector[5], VoigtVector[1], 0.5*VoigtVector[3] },
+                    {0.5*VoigtVector[4], 0.5*VoigtVector[3], VoigtVector[2] }};
+        }
+
         #region Math.NET conversion helpers
         private static Matrix<double> ArrayToMatrix(double[,] A)
             => DenseMatrix.OfArray(A);

@@ -10,7 +10,7 @@
 		<PackageTags>Matrix;vector;calculus;solver;ODE</PackageTags>
 		<Company>University of Massachusetts Lowell</Company>
 		<Authors>Scott Stapleton</Authors>
-		<Version>1.3.3</Version>
+		<Version>1.3.4</Version>
 		<RepositoryUrl>https://github.com/UML-AppliedSolidMechanicsLab/StapletonMathPackage</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/UML-AppliedSolidMechanicsLab/StapletonMathPackage</PackageProjectUrl>
 
